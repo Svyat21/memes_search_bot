@@ -6,7 +6,7 @@ from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from callback_data import state_callback, done_callback, scanning_callback
 from config import TOKEN
 from buttons import button_start
-from models import Meme
+from models import Meme, User
 from manager import text_scanning, check_photo
 from scenario import add_mem, search_mem, DEFAULT_ANSWER
 from states import AddMem, SearchMem
@@ -21,6 +21,7 @@ dpb = Dispatcher(bot, storage=MemoryStorage())
 async def start_command(message: Message, state: FSMContext):
     await message.answer('Привет! Это бот по поиску мемов.\n'
                          'Так же ты можешь помочь нам и добавить новые мемы и их описание', reply_markup=button_start)
+    User.user_update(message)
     await state.finish()
 
 
@@ -80,7 +81,7 @@ async def determining_state(call: CallbackQuery, callback_data: dict):
 async def get_photo(message: Message, state: FSMContext):
     await message.photo[-1].download(f'MemeLibrary/{message.photo[-1]["file_id"]}.jpg')
     file_id = message.photo[-1]["file_id"]
-    if check_photo(f'MemeLibrary/{file_id}.jpg'):
+    if check_photo(f'{file_id}.jpg'):
         await state.update_data(file_id=file_id)
         await message.answer(add_mem['Добавить_мем']['text_after'], reply_markup=add_mem['Добавить_мем']['button'])
     else:

@@ -1,0 +1,7 @@
+aiohttp[speedups]
+aiogram
+opencv-python
+peewee
+Pillow
+pytesseract
+psycopg2-binary

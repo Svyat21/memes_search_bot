@@ -1,5 +1,6 @@
 from config import db
 from peewee import Model, CharField, DateField
+from aiogram.types import Message
 import datetime
 
 
@@ -14,7 +15,7 @@ def db_connect(func):
 
 @db_connect
 def create_tables():
-    db.create_tables([Meme])
+    db.create_tables([Meme, User])
 
 
 class DatabaseUpdater():
@@ -56,6 +57,40 @@ class Meme(Model, DatabaseUpdater):
     mem_text = CharField(null=True)
     mem_category = CharField(null=True)
     date_added = DateField(default=datetime.date.today())
+
+    class Meta:
+        database = db
+
+
+class User(Model):
+    user_id = CharField(unique=True)
+    username = CharField(null=True)
+    first_name = CharField(null=True)
+    last_name = CharField(null=True)
+    language_code = CharField(null=True)
+    connection_date = DateField()
+
+    @classmethod
+    @db_connect
+    def user_update(cls, message: Message):
+        if cls.get_or_none(cls.user_id == message.from_user.id) is None:
+            new_user = cls.create(
+                user_id=message.from_user.id,
+                username=message.from_user.username,
+                connection_date=datetime.date.today()
+            )
+            if message.from_user.first_name:
+                new_user.first_name = message.from_user.first_name
+                new_user.save()
+            if message.from_user.last_name:
+                new_user.last_name = message.from_user.last_name
+                new_user.save()
+        else:
+            user = cls.select().where(cls.user_id == message.from_user.id).first()
+            if user.connection_date == datetime.date.today():
+                return
+            user.connection_date = datetime.date.today()
+            user.save()
 
     class Meta:
         database = db
