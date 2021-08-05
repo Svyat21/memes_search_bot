@@ -28,15 +28,10 @@ class DatabaseUpdater():
                 mem_text=text_mem
             )
 
-    # @classmethod
-    # @db_connect
-    # def insert_text_mem(cls, photo_mem_id, text_mem):
-    #     mem = cls.get_or_none(cls.mem_id == photo_mem_id)
-    #     if mem:
-    #         mem.mem_text = text_mem
-    #         mem.save()
-    #     else:
-    #         cls.create(mem_id=photo_mem_id, mem_text=text_mem)
+    @classmethod
+    @db_connect
+    def get_mem_id_or_none(cls, photo_mem_id):
+        return cls.get_or_none(cls.mem_id == photo_mem_id)
 
     @classmethod
     @db_connect

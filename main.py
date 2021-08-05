@@ -7,9 +7,9 @@ from callback_data import state_callback, done_callback, scanning_callback
 from config import TOKEN
 from buttons import button_start
 from models import Meme, User
-from manager import text_scanning, check_photo
-from scenario import add_mem, search_mem, DEFAULT_ANSWER
-from states import AddMem, SearchMem
+from manager import text_scanning, check_photo, comparison_database
+from scenario import mem_scene, DEFAULT_ANSWER
+from states import DarkState
 
 bot = Bot(token=TOKEN)
 dpb = Dispatcher(bot, storage=MemoryStorage())
@@ -18,32 +18,43 @@ dpb = Dispatcher(bot, storage=MemoryStorage())
 
 
 @dpb.message_handler(commands=['start'])
+async def start_command(message: Message):
+    await message.answer('Привет! Это бот по поиску мемов.\n'
+                         'Так же ты можешь помочь нам и добавить новые мемы и их описание', reply_markup=button_start)
+    User.user_update(message)
+    await DarkState.STATE_OF_REST.set()
+
+
+@dpb.message_handler(commands=['start'], state=DarkState)
 async def start_command(message: Message, state: FSMContext):
     await message.answer('Привет! Это бот по поиску мемов.\n'
                          'Так же ты можешь помочь нам и добавить новые мемы и их описание', reply_markup=button_start)
+    data = await state.get_data()
+    if data:
+        comparison_database(data)
     User.user_update(message)
     await state.finish()
 
 
-@dpb.message_handler(commands=['help'])
+@dpb.message_handler(commands=['help'], state=DarkState)
 async def help_command(message: Message):
     await message.answer('Я умею искать мемы, пока не очень хорошо.')
 
 # -------------------------------------------------------------- Обработчики колбеков
 
 
-@dpb.callback_query_handler(done_callback.filter(readily='ok'), state=AddMem)
+@dpb.callback_query_handler(done_callback.filter(readily='ok'), state=DarkState)
 async def done_state(call: CallbackQuery, state: FSMContext):
     data = await state.get_data()
     Meme.insert_mem(data['file_id'], data['content'].lower())
     await call.answer(cache_time=60)
-    await call.message.answer('Мем добавлен, спасибо за пополнение!')
-    await state.finish()
+    await call.message.answer('Мем добавлен, спасибо за пополнение!', reply_markup=button_start)
+    await DarkState.STATE_OF_REST.set()
 
 
-@dpb.callback_query_handler(scanning_callback.filter(key_name='Сканировать'), state=AddMem)
+@dpb.callback_query_handler(scanning_callback.filter(key_name='Сканировать'), state=DarkState)
 async def determining_state(call: CallbackQuery, callback_data: dict, state: FSMContext):
-    state_data = add_mem[callback_data.get('key_name')]
+    state_data = mem_scene[callback_data.get('key_name')]
     data = await state.get_data()
     text = text_scanning(data.get('file_id'))
     await call.answer(cache_time=60)
@@ -56,9 +67,9 @@ async def determining_state(call: CallbackQuery, callback_data: dict, state: FSM
         await state_data['state'].set()
 
 
-@dpb.callback_query_handler(state_callback.filter(), state=AddMem)
+@dpb.callback_query_handler(state_callback.filter(), state=DarkState)
 async def determining_state(call: CallbackQuery, callback_data: dict):
-    state_data = add_mem[callback_data.get('key_name')]
+    state_data = mem_scene[callback_data.get('key_name')]
     await call.answer(cache_time=60)
     await call.message.answer(state_data['text_before'])
     await state_data['state'].set()
@@ -66,52 +77,48 @@ async def determining_state(call: CallbackQuery, callback_data: dict):
 
 @dpb.callback_query_handler(state_callback.filter())
 async def determining_state(call: CallbackQuery, callback_data: dict):
-    if callback_data.get('key_name') in add_mem:
-        state_data = add_mem[callback_data.get('key_name')]
-    else:
-        state_data = search_mem[callback_data.get('key_name')]
+    state_data = mem_scene[callback_data.get('key_name')]
     await call.answer(cache_time=60)
     await call.message.answer(state_data['text_before'])
     await state_data['state'].set()
 
-# -------------------------------------------------------------- Обработчики состояний AddMem
+# -------------------------------------------------------------- Обработчики состояний DarkState
 
 
-@dpb.message_handler(state=AddMem.STATE_1, content_types=ContentType.PHOTO)
+@dpb.message_handler(state=DarkState.STATE_OF_REST, content_types=ContentType.PHOTO)
 async def get_photo(message: Message, state: FSMContext):
+    # data = state.get_data()
+    # if data:
+    #     comparison_database(data)
     await message.photo[-1].download(f'MemeLibrary/{message.photo[-1]["file_id"]}.jpg')
     file_id = message.photo[-1]["file_id"]
     if check_photo(f'{file_id}.jpg'):
         await state.update_data(file_id=file_id)
-        await message.answer(add_mem['Добавить_мем']['text_after'], reply_markup=add_mem['Добавить_мем']['button'])
+        await message.answer(mem_scene['Добавить_мем']['text_after'], reply_markup=mem_scene['Добавить_мем']['button'])
     else:
         await message.answer('Такой мем уже есть, загрузите другой.')
 
 
-@dpb.message_handler(state=AddMem.STATE_2)
+@dpb.message_handler(state=DarkState.DESCRIPTION_STATE)
 async def get_content(message: Message, state: FSMContext):
     content = message.text
     await state.update_data(content=content)
-    await message.answer(add_mem['Написать']['text_after'], reply_markup=add_mem['Написать']['button'])
-
-# -------------------------------------------------------------- Обработчики состояний SearchMem
+    await message.answer(mem_scene['Написать']['text_after'], reply_markup=mem_scene['Написать']['button'])
 
 
-@dpb.message_handler(state=SearchMem.STATE_1)
+@dpb.message_handler(state=DarkState.SEARCH_STATE)
 async def get_description(message: Message, state: FSMContext):
     res = Meme.get_mem_or_none(message.text)
     if res:
         for i in res:
             await message.answer_photo(i[0])
-        await message.answer('поиск выполнен!')
+        await message.answer('поиск выполнен!', reply_markup=button_start)
     else:
-        await message.answer('По вашему запросу нет результатов.')
+        await message.answer('По вашему запросу нет результатов.', reply_markup=button_start)
     await state.finish()
 
-# -------------------------------------------------------------- Все остальные сообщения
 
-
-@dpb.message_handler()
+@dpb.message_handler(state=DarkState.STATE_OF_REST)
 async def everything_else(massage: Message):
     await massage.answer(DEFAULT_ANSWER['text'], reply_markup=DEFAULT_ANSWER['button'])
 
