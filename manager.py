@@ -10,10 +10,12 @@ def comparison_database(data):
         if Meme.get_mem_id_or_none(data['file_id']) is None:
             os.remove(f'MemeLibrary/{data["file_id"]}.jpg')
 
+
 def text_scanning(photo):
     scan_photo = cv2.imread(f'MemeLibrary/{photo}.jpg')
     scan_photo = cv2.cvtColor(scan_photo, cv2.COLOR_BGR2RGB)
     scan_res = pytesseract.image_to_string(scan_photo, lang='rus')
+    print(scan_res)
     return scan_res
 
 
@@ -29,6 +31,7 @@ def check_photo(check_file):
         if check_file == file:
             continue
         if difference_images(check_file, file) is None:
+            os.remove(f'MemeLibrary/{check_file}')
             break
     else:
         return True
