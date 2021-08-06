@@ -1,5 +1,5 @@
 from config import db
-from peewee import Model, CharField, DateField
+from peewee import Model, CharField, DateField, TextField
 from aiogram.types import Message
 import datetime
 
@@ -49,7 +49,7 @@ class DatabaseUpdater():
 
 class Meme(Model, DatabaseUpdater):
     mem_id = CharField(unique=True)
-    mem_text = CharField(null=True)
+    mem_text = TextField(null=True)
     mem_category = CharField(null=True)
     date_added = DateField(default=datetime.date.today())
 
