@@ -1,6 +1,6 @@
 .idea/*
 venv/*
-config.py
 memes_search.db
 MemeLibrary/*
 comands.txt
+.env

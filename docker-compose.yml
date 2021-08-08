@@ -1,0 +1,34 @@
+version: "3.9"
+services:
+  db:
+    image: postgres:latest
+    container_name: postgres
+    ports:
+      - 5432:5432
+    volumes:
+      - ./pg_data:/var/lib/postgresql/data
+    env_file:
+      - ".env"
+    restart: always
+  elasticsearch:
+    image: elasticsearch:latest
+    container_name: elasticsearch
+    ports:
+      - 9200:9200
+    environment:
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    volumes:
+      - ./elasticdata:/usr/share/elasticsearch/data
+    restart: always
+  app:
+    container_name: mem_app
+    build:
+      context: .
+    command:
+      - python3 main.py
+    env_file:
+      - ".env"
+    links:
+      - db
+      - elasticsearch
+    restart: always
