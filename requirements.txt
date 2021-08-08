@@ -1,3 +1,4 @@
+python-dotenv
 aiohttp[speedups]
 aiogram
 opencv-python
