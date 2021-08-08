@@ -6,3 +6,4 @@ peewee
 Pillow
 pytesseract
 psycopg2-binary
+elasticsearch

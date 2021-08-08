@@ -4,14 +4,14 @@ from aiogram.types import ContentType, CallbackQuery, Message
 from aiogram.dispatcher import Dispatcher, FSMContext
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from callback_data import state_callback, done_callback, scanning_callback
-from config import TOKEN
+from config import token
 from buttons import button_start
 from models import Meme, User
 from manager import text_scanning, check_photo, comparison_database
 from scenario import mem_scene, DEFAULT_ANSWER
 from states import DarkState
 
-bot = Bot(token=TOKEN)
+bot = Bot(token=token)
 dpb = Dispatcher(bot, storage=MemoryStorage())
 
 # -------------------------------------------------------------- Команды

@@ -1,5 +1,6 @@
 import os
 from peewee import PostgresqlDatabase
+from elasticsearch import Elasticsearch
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -11,4 +12,6 @@ db = PostgresqlDatabase(
     host='localhost'
 )
 
-TOKEN = os.getenv('TOKEN')
+token = os.getenv('TOKEN')
+
+el_search = Elasticsearch(os.getenv('ELASTICSEARCH_URL'))
