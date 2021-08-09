@@ -7,7 +7,7 @@ load_dotenv()
 
 db = PostgresqlDatabase(
     os.getenv('POSTGRES_DB'),
-    user='postgres',
+    user='svyat',
     password=os.getenv('POSTGRES_PASSWORD'),
     host='localhost'
 )

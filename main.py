@@ -1,6 +1,7 @@
 from aiogram import Bot
 from aiogram.utils import executor
-from aiogram.types import ContentType, CallbackQuery, Message
+from aiogram.utils.exceptions import WrongFileIdentifier
+from aiogram.types import ContentType, CallbackQuery, Message, InputFile
 from aiogram.dispatcher import Dispatcher, FSMContext
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from callback_data import state_callback, done_callback, scanning_callback
@@ -34,6 +35,14 @@ async def start_command(message: Message, state: FSMContext):
         comparison_database(data)
     User.user_update(message)
     await state.finish()
+
+
+@dpb.message_handler(commands=['count'], state=DarkState)
+async def start_command(message: Message):
+    count_mem = Meme.mem_count()
+    count_u = User.user_count()
+    await message.answer(f'количество мемов в боте на данный момент - {count_mem}.')
+    await message.answer(f'количество пользователей, нажавших кнопку "/statr" - {count_u}.', reply_markup=button_start)
 
 
 @dpb.message_handler(commands=['help'], state=DarkState)
@@ -87,9 +96,6 @@ async def determining_state(call: CallbackQuery, callback_data: dict):
 
 @dpb.message_handler(state=DarkState.STATE_OF_REST, content_types=ContentType.PHOTO)
 async def get_photo(message: Message, state: FSMContext):
-    # data = state.get_data()
-    # if data:
-    #     comparison_database(data)
     await message.photo[-1].download(f'MemeLibrary/{message.photo[-1]["file_id"]}.jpg')
     file_id = message.photo[-1]["file_id"]
     if check_photo(f'{file_id}.jpg'):
@@ -111,7 +117,11 @@ async def get_description(message: Message, state: FSMContext):
     res = Meme.get_mem_or_none(message.text)
     if res:
         for i in res:
-            await message.answer_photo(i[0])
+            try:
+                await message.answer_photo((i[0]))
+            except WrongFileIdentifier:
+                photo = InputFile(f'MemeLibrary/{i[0]}.jpg')
+                await message.answer_photo(photo)
         await message.answer('поиск выполнен!', reply_markup=button_start)
     else:
         await message.answer('По вашему запросу нет результатов.', reply_markup=button_start)
